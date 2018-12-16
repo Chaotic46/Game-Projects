@@ -1,0 +1,383 @@
+/*This program is a replica of space invaders. It implements the OLCConsoleGameEngine 
+created by youtube programmer JavidX9 (link to youtube: https://www.youtube.com/channel/UC-yuWVUplUJZvieEligKBkA)
+in order to display to the screen, use sprites, and to use keyboard input. This program
+uses multiple algorithms to move both the tank and the aliens, their missiles, and perform
+unit collision based on what the next character is. The Tank can take three hits, Once it has, the program returns
+and exits. Same thing will happen when all 30 aliens have been hit.
+NOTE: only problem lies with the randomness of the alien missiles being generated due to having access to only the
+standard random generator function from the cstdlib.
+
+Creator: Sean Collard*/
+
+#include<iostream>
+#include<string>
+#include<vector>
+#include<ctime>
+#include<cstdlib>
+#include"olcConsoleGameEngine.h"
+
+using namespace std;
+
+class SpaceInvaders : public olcConsoleGameEngine
+{
+public:
+	SpaceInvaders()
+	{
+		m_sAppName = L"Space Invaders";
+	}
+	
+private:
+	wstring Space;
+
+	vector<pair<int, int>> TMissile;
+	vector<int> TMissileOffSet;
+	vector<wchar_t> TNextChar;
+
+	vector<pair<int, int>> AMissile;
+	vector<int> AMissileOffSet;
+	vector<wchar_t> ANextChar;
+	vector<vector<bool>> AreAliensAlive = { { false, false, false, false, false, true }, 
+											{ false, false, false, false, false, true }, 
+											{ false, false, false, false, false, true }, 
+											{ false, false, false, false, false, true },
+											{ false, false, false, false, false, true } };
+
+	int yOffSet = 0;
+	int xOffSet = 0;
+	int TankOffSet = 0;
+
+	int AlienCount = 30;
+	int SpaceRows = 15;
+	int SpaceHeight = 11;
+	int CellSize = 8;
+	int Barrier1_HP = 3;
+	int Barrier2_HP = 3;
+	int Barrier3_HP = 3;
+	int TankHP = 3;
+
+	int TankX = 7;
+	float fTimeSinceStart = 0.0f;
+
+	bool IsTankHit = false;
+	bool HaveAliensMoved = true;
+	bool temp = false;
+	bool LoopBreak = false;
+
+	olcSprite *Invader6 = nullptr;
+	olcSprite *Invader6_1 = nullptr;
+	olcSprite *Invader5 = nullptr;
+	olcSprite *Invader5_1 = nullptr;
+	olcSprite *Invader4 = nullptr;
+	olcSprite *Invader4_1 = nullptr;
+	olcSprite *Invader3 = nullptr;
+	olcSprite *Invader3_1 = nullptr;
+	olcSprite *Invader2 = nullptr;
+	olcSprite *Invader2_1 = nullptr;
+	olcSprite *Invader1 = nullptr;
+	olcSprite *Invader1_1 = nullptr;
+	olcSprite *Tank = nullptr;
+	olcSprite *Ground = nullptr;
+	olcSprite *Barrier1 = nullptr;
+	olcSprite *Barrier2 = nullptr;
+	olcSprite *Barrier3 = nullptr;
+	olcSprite *TankMissile = nullptr;
+
+protected:
+	virtual bool OnUserCreate()
+	{
+		Space += L"..6.6.6.6.6....";
+		Space += L"..5.5.5.5.5....";
+		Space += L"..4.4.4.4.4....";
+		Space += L"..3.3.3.3.3....";
+		Space += L"..2.2.2.2.2....";
+		Space += L"..1.1.1.1.1....";
+		Space += L"...............";
+		Space += L"...............";
+		Space += L"...@...#...$...";
+		Space += L".......^.......";
+		Space += L"XXXXXXXXXXXXXXX";
+
+		Invader6 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader6.spr");
+		Invader6_1 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader6_1.spr");
+		Invader5 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader5.spr");
+		Invader5_1 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader5_1.spr");
+		Invader4 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader4.spr");
+		Invader4_1 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader4_1.spr");
+		Invader3 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader3.spr");
+		Invader3_1 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader3_1.spr");
+		Invader2 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader2.spr");
+		Invader2_1 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader2_1.spr");
+		Invader1 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader1.spr");
+		Invader1_1 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Invader1_1.spr");
+		
+		Tank = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Tank.spr");
+		TankMissile = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Missile.spr");
+		Ground = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Ground.spr");
+		Barrier1 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Barrier.spr");
+		Barrier2 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Barrier2.spr");
+		Barrier3 = new olcSprite(L"C:/VisualStudioCode/SpaceInvadersGame/SpaceInvaders/SpaceInvaderSprites/Barrier3.spr");
+
+		return true;
+	}
+
+	virtual bool OnUserUpdate(float fElapsedTime)
+	{
+		int x = 2;
+
+		//Lambda to delete Tank Missiles
+		auto DeleteTMissile = [&](int a) -> void
+		{
+			TMissileOffSet.erase(TMissileOffSet.begin() + a);
+			TMissile.erase(TMissile.begin() + a);
+			TNextChar.erase(TNextChar.begin() + a);
+		};
+		
+		//Lambda to delete Alien Missiles
+		auto DeleteAMissile = [&](int a) -> void
+		{
+			AMissileOffSet.erase(AMissileOffSet.begin() + a);
+			AMissile.erase(AMissile.begin() + a);
+			ANextChar.erase(ANextChar.begin() + a);
+		};
+
+		//Lambda to delete Aliens
+		auto KillAlien = [&](int a) -> void
+		{
+			if(yOffSet % 2 == 0)
+				Space[((TMissile[a].second - TMissileOffSet[a] - yOffSet) / CellSize)*SpaceRows + ((TMissile[a].first + 3 - xOffSet) / CellSize)] = L'.';
+			else
+				Space[((TMissile[a].second - TMissileOffSet[a] - yOffSet) / CellSize)*SpaceRows + ((TMissile[a].first + 3 - 15 + xOffSet) / CellSize)] = L'.';
+			DeleteTMissile(a);
+		};
+
+		Fill(0, 0, ScreenWidth(), ScreenHeight(), L' ');
+		
+		//OffSets for Sprites are created here
+		if (m_keys[VK_RIGHT].bPressed || m_keys[VK_RIGHT].bHeld)
+		{
+			TankOffSet++;
+			if (TankOffSet > 56)
+				TankOffSet = 56;
+		}
+		if (m_keys[VK_LEFT].bPressed || m_keys[VK_LEFT].bHeld)
+		{
+			TankOffSet--;
+			if (TankOffSet < -56)
+				TankOffSet = -56;
+		} 
+		
+		for (unsigned int i = 0; i < TMissile.size(); i++)
+			TMissileOffSet[i]++;
+
+		for (unsigned int i = 0; i < AMissile.size(); i++)
+			AMissileOffSet[i]++;
+
+		fTimeSinceStart += fElapsedTime;
+		xOffSet = (int)((float)CellSize * fTimeSinceStart * 0.25f) % 16;
+		
+		//Sprites Being Drawn
+		for (int y = 0; y < SpaceHeight; y++)
+		{
+			for (int i = 0; i < SpaceRows; i++)
+			{
+				if (yOffSet % 2 == 0)
+				{
+					if (Space[y*SpaceRows + i] == '6')		    (xOffSet % 2 == 0)? DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader6) : 	DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader6_1);
+					if (Space[y*SpaceRows + i] == '5')		    (xOffSet % 2 == 0)? DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader5) : 	DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader5_1);
+					if (Space[y*SpaceRows + i] == '4')		    (xOffSet % 2 == 0)? DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader4) : 	DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader4_1);
+					if (Space[y*SpaceRows + i] == '3')		    (xOffSet % 2 == 0)? DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader3) : 	DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader3_1);
+					if (Space[y*SpaceRows + i] == '2')		    (xOffSet % 2 == 0)? DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader2) : 	DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader2_1);
+					if (Space[y*SpaceRows + i] == '1')		    (xOffSet % 2 == 0)? DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader1) : 	DrawSprite(i*CellSize + xOffSet, y*CellSize + yOffSet, Invader1_1);
+					if (Space[y*SpaceRows + i] == '^' && TankHP > 0)				DrawSprite(TankX*CellSize + TankOffSet, y*CellSize, Tank);
+					if (Space[y*SpaceRows + i] == '@' && Barrier1_HP == 3)			DrawSprite(i*CellSize, y*CellSize, Barrier1);
+					else if (Space[y*SpaceRows + i] == '@' && Barrier1_HP == 2)		DrawSprite(i*CellSize, y*CellSize, Barrier2);
+					else if (Space[y*SpaceRows + i] == '@' && Barrier1_HP == 1)		DrawSprite(i*CellSize, y*CellSize, Barrier3);
+					if (Space[y*SpaceRows + i] == '#' && Barrier2_HP == 3)			DrawSprite(i*CellSize, y*CellSize, Barrier1);
+					else if (Space[y*SpaceRows + i] == '#' && Barrier2_HP == 2)		DrawSprite(i*CellSize, y*CellSize, Barrier2);
+					else if (Space[y*SpaceRows + i] == '#' && Barrier2_HP == 1)		DrawSprite(i*CellSize, y*CellSize, Barrier3);
+					if (Space[y*SpaceRows + i] == '$' && Barrier3_HP == 3)			DrawSprite(i*CellSize, y*CellSize, Barrier1);
+					else if (Space[y*SpaceRows + i] == '$' && Barrier3_HP == 2)		DrawSprite(i*CellSize, y*CellSize, Barrier2);
+					else if (Space[y*SpaceRows + i] == '$' && Barrier3_HP == 1)		DrawSprite(i*CellSize, y*CellSize, Barrier3);
+					if (Space[y*SpaceRows + i] == 'X')								DrawSprite(i*CellSize, y*CellSize, Ground);
+					for (unsigned int j = 0; j < TMissile.size(); j++)				DrawSprite(TMissile[j].first, TMissile[j].second - TMissileOffSet[j], TankMissile);
+					for (unsigned int j = 0; j < AMissile.size(); j++)				DrawSprite(AMissile[j].first, AMissile[j].second + AMissileOffSet[j], TankMissile);
+				}
+				else
+				{
+					if (Space[y*SpaceRows + i] == '6')         (xOffSet % 2 == 0) ? DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader6) : DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader6_1);
+					if (Space[y*SpaceRows + i] == '5')         (xOffSet % 2 == 0) ? DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader5) : DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader5_1);
+					if (Space[y*SpaceRows + i] == '4')         (xOffSet % 2 == 0) ? DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader4) : DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader4_1);
+					if (Space[y*SpaceRows + i] == '3')         (xOffSet % 2 == 0) ? DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader3) : DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader3_1);
+					if (Space[y*SpaceRows + i] == '2')         (xOffSet % 2 == 0) ? DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader2) : DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader2_1);
+					if (Space[y*SpaceRows + i] == '1')         (xOffSet % 2 == 0) ? DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader1) : DrawSprite(i*CellSize + 15 - xOffSet, y*CellSize + yOffSet, Invader1_1);
+					if (Space[y*SpaceRows + i] == '^' && TankHP > 0)				DrawSprite(TankX*CellSize + TankOffSet, y*CellSize, Tank);
+					if (Space[y*SpaceRows + i] == '@' && Barrier1_HP == 3)			DrawSprite(i*CellSize, y*CellSize, Barrier1);
+					else if (Space[y*SpaceRows + i] == '@' && Barrier1_HP == 2)		DrawSprite(i*CellSize, y*CellSize, Barrier2);
+					else if (Space[y*SpaceRows + i] == '@' && Barrier1_HP == 1)		DrawSprite(i*CellSize, y*CellSize, Barrier3);
+					if (Space[y*SpaceRows + i] == '#' && Barrier2_HP == 3)			DrawSprite(i*CellSize, y*CellSize, Barrier1);
+					else if (Space[y*SpaceRows + i] == '#' && Barrier2_HP == 2)	    DrawSprite(i*CellSize, y*CellSize, Barrier2);
+					else if (Space[y*SpaceRows + i] == '#' && Barrier2_HP == 1)	    DrawSprite(i*CellSize, y*CellSize, Barrier3);
+					if (Space[y*SpaceRows + i] == '$' && Barrier3_HP == 3)			DrawSprite(i*CellSize, y*CellSize, Barrier1);
+					else if (Space[y*SpaceRows + i] == '$' && Barrier3_HP == 2)		DrawSprite(i*CellSize, y*CellSize, Barrier2);
+					else if (Space[y*SpaceRows + i] == '$' && Barrier3_HP == 1)		DrawSprite(i*CellSize, y*CellSize, Barrier3);
+					if (Space[y*SpaceRows + i] == 'X')								DrawSprite(i*CellSize, y*CellSize, Ground);
+					for (unsigned int j = 0; j < TMissile.size(); j++)				DrawSprite(TMissile[j].first, TMissile[j].second - TMissileOffSet[j], TankMissile);
+					for (unsigned int j = 0; j < AMissile.size(); j++)				DrawSprite(AMissile[j].first, AMissile[j].second + AMissileOffSet[j], TankMissile);
+				}
+			}
+		}
+
+		//Alien's yOffSet is updated
+		if (xOffSet != 0)								///////////////////////
+			HaveAliensMoved = false;					//		James		 //
+		else if (xOffSet == 0 && !HaveAliensMoved)		//		Helped  	 //
+		{												//       with        //
+			yOffSet++;									//       this	     //
+			HaveAliensMoved = true;						//		 Part		 //
+		}												///////////////////////
+
+		//Missiles are created when space key is pressed
+		if (m_keys[VK_SPACE].bPressed)
+		{
+			TMissile.push_back(make_pair(TankX*CellSize + TankOffSet, 8 * CellSize + 4));
+			TMissileOffSet.push_back(0);
+			TNextChar.push_back(' ');
+		}
+		
+		for (int i = 0; i < (int)(AreAliensAlive.size()); i++)
+		{
+			for (int j = (int)(AreAliensAlive[i].size()) - 1; j > -1; j--)
+			{
+				if (AreAliensAlive[i][j] && (rand() % 100) + 1 > 98 && yOffSet % 2 == 0)
+				{
+					AMissile.push_back(make_pair(x*CellSize + xOffSet, (j + 1)*CellSize + yOffSet));
+					AMissileOffSet.push_back(0);
+					ANextChar.push_back(L' ');
+				}
+				else if (AreAliensAlive[i][j] && (rand() % 100) + 1 > 99 && yOffSet % 2 == 1)
+				{
+					AMissile.push_back(make_pair(x*CellSize + 15 - xOffSet, (j + 1)*CellSize + yOffSet));
+					AMissileOffSet.push_back(0);
+					ANextChar.push_back(L' ');
+				}
+			}
+			x += 2;
+		}
+
+		//Checking done for the next character of each missile is
+		if (yOffSet % 2 == 0)
+		{
+			//for loop to see what the next character in front of Tank Missile is
+			for (unsigned int i = 0; i < TNextChar.size(); i++)
+			{
+				if (((TMissile[i].second - TMissileOffSet[i] - yOffSet) / CellSize)*SpaceRows + ((TMissile[i].first + 3 - xOffSet) / CellSize) < 0)
+					continue;
+				else
+					TNextChar[i] = Space[((TMissile[i].second - TMissileOffSet[i] - yOffSet) / CellSize)*SpaceRows + ((TMissile[i].first + 3 - xOffSet) / CellSize)];
+			}
+			//for loop to see what the next character in front of Alien Missile is
+			for (unsigned int i = 0; i < ANextChar.size(); i++) {
+				ANextChar[i] = Space[((AMissile[i].second + AMissileOffSet[i] + CellSize) / CellSize)*SpaceRows + ((AMissile[i].first + TankOffSet + 3) / CellSize)];
+
+				//Unit collision logic for Alien Missile
+				if (ANextChar[i] == L'X')
+					DeleteAMissile(i);
+				else if (ANextChar[i] == L'^') {
+					TankHP--;
+					DeleteAMissile(i);
+				}
+				else if (ANextChar[i] == L'@') {
+					Barrier1_HP--;
+					if (Barrier1_HP == 0)
+						Space[123] = L'.';
+					DeleteAMissile(i);
+				}
+				else if (ANextChar[i] == L'#') {
+					Barrier2_HP--;
+					if (Barrier2_HP == 0)
+						Space[127] = L'.';
+					DeleteAMissile(i);
+				}
+				else if (ANextChar[i] == L'$') {
+					Barrier3_HP--;
+					if (Barrier3_HP == 0)
+						Space[131] = L'.';
+					DeleteAMissile(i);
+				}
+			}
+		}
+		else
+		{
+			//Tank Missile check
+			for (unsigned int i = 0; i < TNextChar.size(); i++)
+			{
+				if (((TMissile[i].second - TMissileOffSet[i] - yOffSet) / CellSize)*SpaceRows + ((TMissile[i].first - 3 + 15 + xOffSet) / CellSize) < 0)
+					continue;
+				else
+					TNextChar[i] = Space[((TMissile[i].second - TMissileOffSet[i] - yOffSet) / CellSize)*SpaceRows + ((TMissile[i].first + 3 - 15 + xOffSet) / CellSize)];
+			}
+			//Alien Missile check
+			for (unsigned int i = 0; i < ANextChar.size(); i++){
+				ANextChar[i] = Space[((AMissile[i].second + AMissileOffSet[i] + CellSize) / CellSize)*SpaceRows + ((AMissile[i].first + 15 - TankOffSet) / CellSize)];
+
+				if (ANextChar[i] == L'X')
+					DeleteAMissile(i);
+				else if (ANextChar[i] == L'^') {
+					TankHP--;
+					DeleteAMissile(i);
+				}
+				else if (ANextChar[i] == L'@') {
+					Barrier1_HP--;
+					if (Barrier1_HP == 0)
+						Space[123] = L' ';
+					DeleteAMissile(i);
+				}
+				else if (ANextChar[i] == L'#') {
+					Barrier2_HP--;
+					if(Barrier2_HP == 2)
+						Space[127] = L'.';
+					DeleteAMissile(i);
+				}
+				else if (ANextChar[i] == L'$') {
+					Barrier3_HP--;
+					if(Barrier3_HP == 0)
+						Space[131] = L'.';
+					DeleteAMissile(i);
+				}
+			}
+		}
+
+		//collision detection
+		for (unsigned int i = 0; i < TMissile.size(); i++)
+		{
+			//Missile goes off into space
+			if (TMissileOffSet[i] > 68)
+				DeleteTMissile(i);
+		}
+
+		for (int i = TNextChar.size() - 1; i > -1; i--)
+		{
+			//Tank Missile collides with aliens
+			if (TNextChar[i] == L'1' || TNextChar[i] == L'2' || TNextChar[i] == L'3' || TNextChar[i] == L'4' || TNextChar[i] == L'5' || TNextChar[i] == L'6')
+				KillAlien(i);
+		}
+		
+		//Program exits
+		if (TankHP == 0) {
+			return false;
+		}
+
+		return true;
+	}
+};
+
+int main()
+{
+	srand(time(0));
+
+	SpaceInvaders Game_1;
+	Game_1.ConstructConsole(120, 88, 8, 8);
+	Game_1.Start();
+
+	return 0;
+}
