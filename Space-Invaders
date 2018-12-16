@@ -228,13 +228,13 @@ protected:
 		}
 
 		//Alien's yOffSet is updated
-		if (xOffSet != 0)								///////////////////////
-			HaveAliensMoved = false;					//		James		 //
-		else if (xOffSet == 0 && !HaveAliensMoved)		//		Helped  	 //
-		{												//       with        //
-			yOffSet++;									//       this	     //
-			HaveAliensMoved = true;						//		 Part		 //
-		}												///////////////////////
+		if (xOffSet != 0)								
+			HaveAliensMoved = false;					
+		else if (xOffSet == 0 && !HaveAliensMoved)		
+		{												
+			yOffSet++;									
+			HaveAliensMoved = true;						
+		}												
 
 		//Missiles are created when space key is pressed
 		if (m_keys[VK_SPACE].bPressed)
